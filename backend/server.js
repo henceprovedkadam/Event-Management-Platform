@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
-const SignUpModel = require('./models/SignUpData')
+const SignUpModel = require('./models/SignUpData');
+const bcrypt = require('bcrypt');
 
 const app = express();
 app.use(express.json());
@@ -15,10 +16,34 @@ mongoose.connect("mongodb://localhost:27017/Event_Management_Platform")
 })
 
 app.post('/register', (req, res) => {
-    SignUpModel.create(req.body)
-    .then(signup => res.json(signup))
-    .catch((err) => {
-        console.error("Registration failed: ", err)
+    const {name, email, password} = req.body;
+    bcrypt.hash(password, 10)
+    .then(hash => {
+        SignUpModel.create({name, email, password: hash})
+        .then(signup => res.json(signup))
+        .catch((err) => {
+            console.error("Registration failed: ", err)
+        })
+    }).catch((err) => {
+        console.error("This is outside catch: ", err);
+    })
+})
+
+app.post('/login', (req, res) => {
+    const {email, password} = req.body;
+    SignUpModel.findOne({email: email})
+    .then(user => {
+        if(user){
+            bcrypt.compare(password, user.password, (err, response) => {
+                if(response){
+                    res.json('Login successfull')
+                } else{
+                    res.json('Password or username incorrrect')
+                }
+            })
+        } else{
+            res.json("No record exist")
+        }
     })
 })
 
